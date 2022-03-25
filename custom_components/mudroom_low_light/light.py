@@ -52,6 +52,7 @@ light_entity = "light.mudroom_low_group"
 # harmony_entity = "remote.theater_harmony_hub"
 switch_action = "zigbee2mqtt/Mudroom Switch/action"
 motion_sensor_action = "zigbee2mqtt/Mudroom Low Motion Sensor"
+motion_sensor_action2 = "zigbee2mqtt/Mudroom High Motion Sensor"
 brightness_step = 43
 motion_sensor_brightness = 192
 has_harmony = False
@@ -84,6 +85,13 @@ async def async_setup_platform(
         """A new motion sensor MQTT message has been received"""
         await ent.motion_sensor_message_received(topic, json.loads(payload), qos)
 
+    @callback
+    async def motion_sensor_message_received2(
+        topic: str, payload: str, qos: int
+    ) -> None:
+        """A new motion sensor MQTT message has been received"""
+        await ent.motion_sensor_message_received2(topic, json.loads(payload), qos)
+
     if has_switch:
         await hass.components.mqtt.async_subscribe(
             switch_action, switch_message_received
@@ -91,6 +99,9 @@ async def async_setup_platform(
     if has_motion_sensor:
         await hass.components.mqtt.async_subscribe(
             motion_sensor_action, motion_sensor_message_received
+        )
+        await hass.components.mqtt.async_subscribe(
+            motion_sensor_action2, motion_sensor_message_received2
         )
 
 
@@ -113,6 +124,7 @@ class MudroomLowLight(LightEntity):
         self._is_on = False
         self._available = True
         self._occupancy = False
+        self._occupancy2 = False
         self.entity_id = generate_entity_id(ENTITY_ID_FORMAT, self._name, [])
         self._white_value: Optional[int] = None
         self._effect_list: Optional[List[str]] = None
@@ -371,7 +383,12 @@ class MudroomLowLight(LightEntity):
             await self.async_turn_on(source="Switch", brightness=255)
         elif payload == "off-press":
             self.switched_on = False
-            await self.async_turn_off(source="Switch")
+            if self._occupancy == False and self._occupancy2 == False:
+                await self.async_turn_off(source="Switch")
+            else:
+                await self.async_turn_on(
+                    brightness=motion_sensor_brightness, source="MotionSensor"
+                )
         elif payload == "up-press":
             await self.up_brightness(source="Switch")
         # elif payload == "up-hold":
@@ -404,4 +421,31 @@ class MudroomLowLight(LightEntity):
                 brightness=motion_sensor_brightness, source="MotionSensor"
             )
         else:
-            await self.async_turn_off()
+            if self._occupancy2 == False:
+                await self.async_turn_off()
+
+    async def motion_sensor_message_received2(
+        self, topic: str, payload: str, qos: int
+    ) -> None:
+        """A new MQTT message has been received."""
+        if self._occupancy2 == payload["occupancy"]:
+            # No change to state
+            return
+
+        self._occupancy2 = payload["occupancy"]
+
+        # Disable motion sensor tracking if the lights are switched on or the harmony is on
+        if has_harmony:
+            if self.switched_on or self.harmony_on:
+                return
+        else:
+            if self.switched_on:
+                return
+
+        if self._occupancy:
+            await self.async_turn_on(
+                brightness=motion_sensor_brightness, source="MotionSensor"
+            )
+        else:
+            if self._occupancy == False:
+                await self.async_turn_off()
