@@ -442,7 +442,7 @@ class MudroomLowLight(LightEntity):
             if self.switched_on:
                 return
 
-        if self._occupancy:
+        if self._occupancy2:
             await self.async_turn_on(
                 brightness=motion_sensor_brightness, source="MotionSensor"
             )
