@@ -31,7 +31,7 @@ class MudroomLowLight(NewLight):
     def __init__(self) -> None:
         """Initialize Mudroom Low Light."""
         super(MudroomLowLight, self).__init__(
-            "Mudroom Low Light", domain=DOMAIN, debug=False, debug_rl=False
+            "Mudroom Low", domain=DOMAIN, debug=False, debug_rl=False
         )
 
         self.entities["light.mudroom_low_group"] = None
