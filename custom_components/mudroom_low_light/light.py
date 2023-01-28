@@ -35,6 +35,6 @@ class MudroomLowLight(NewLight):
         )
 
         self.entities["light.mudroom_low_group"] = None
-        self.switch = "Mudroom Switch"
+        self.switch = "Mudroom Low Switch"
         self.motion_sensors.append("Mudroom Low Motion Sensor")
         self.motion_sensors.append("Mudroom High Motion Sensor")
